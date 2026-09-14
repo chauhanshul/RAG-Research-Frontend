@@ -8,6 +8,7 @@ import Form from "@/app/components/Form";
 import Window from "@/app/components/Window";
 
 export default function View() {
+  console.log("View Loaded")
   const {
     state,
     selectedDatasetId,

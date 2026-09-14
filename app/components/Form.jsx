@@ -6,6 +6,7 @@ import api from "@/app/lib/api";
 import { useApp } from "@/app/context/AppContext";
 
 export default function Form({ onSuccess, onCancel }) {
+  console.log("Form Loaded")
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const { setState } = useApp();

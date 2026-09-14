@@ -13,6 +13,7 @@ import api from "@/app/lib/api";
 import { useApp } from "@/app/context/AppContext";
 
 export default function List() {
+  console.log("List Loaded")
   const {
     state,
     setState,
@@ -93,7 +94,7 @@ export default function List() {
     setSelectedDatasetId(null);
     setState("data");
   };
-
+  
   return (
     <aside className="w-full md:w-[320px] lg:w-[360px] shrink-0 h-full flex flex-col bg-zinc-900/40 border-r border-zinc-800/80 overflow-hidden">
       {/* Sidebar Header */}

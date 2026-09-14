@@ -16,6 +16,7 @@ import api from "@/app/lib/api";
 import { useApp } from "@/app/context/AppContext";
 
 export default function Navbar() {
+  console.log("Navbar Loaded")
   const { selectedDatasetId, goBack } = useApp();
 
   const fileInputRef = useRef(null);

@@ -17,6 +17,7 @@ import api from "@/app/lib/api";
 import { useApp } from "@/app/context/AppContext";
 
 export default function Window() {
+  console.log("Window Loaded")
   const { selectedDatasetId, selectedSessionId } = useApp();
 
   const [question, setQuestion] = useState("");

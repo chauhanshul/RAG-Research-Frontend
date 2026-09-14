@@ -5,7 +5,10 @@ import View from "@/app/components/View";
 import Navbar from "@/app/components/Navbar";
 import { AppProvider } from "@/app/context/AppContext";
 
+
+
 export default function Home() {
+  console.log("HOME LOADED"); 
   return (
     <AppProvider>
       <div className="h-screen w-screen flex flex-col overflow-hidden bg-zinc-950">
