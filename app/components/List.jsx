@@ -39,6 +39,7 @@ export default function List() {
       try {
         setLoading(true);
         setError(null);
+        console.log("About to call backend");
         const res = await api.get("/datasets");
         setDatasets(res.data);
       } catch (err) {
