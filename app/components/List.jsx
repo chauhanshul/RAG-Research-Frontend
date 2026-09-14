@@ -13,7 +13,8 @@ import api from "@/app/lib/api";
 import { useApp } from "@/app/context/AppContext";
 
 export default function List() {
-  console.log("List Loaded")
+  console.log("List Loaded");
+
   const {
     state,
     setState,
@@ -22,6 +23,7 @@ export default function List() {
     selectedSessionId,
     setSelectedSessionId,
     refreshTrigger,
+    isRestoring,
   } = useApp();
 
   const [datasets, setDatasets] = useState([]);
@@ -32,7 +34,7 @@ export default function List() {
 
   // Fetch datasets when state === "data"
   useEffect(() => {
-    if (state !== "data") {
+    if (isRestoring || state !== "data") {
       return;
     }
 
@@ -40,8 +42,13 @@ export default function List() {
       try {
         setLoading(true);
         setError(null);
+
         console.log("About to call backend");
+
         const res = await api.get("/datasets");
+
+        console.log("Datasets response:", res.data);
+
         setDatasets(res.data);
       } catch (err) {
         console.error("Failed to fetch datasets:", err);
@@ -52,11 +59,15 @@ export default function List() {
     };
 
     fetchDatasets();
-  }, [state, refreshTrigger]);
+  }, [state, refreshTrigger, isRestoring]);
 
   // Fetch sessions for selected dataset when state === "session"
   useEffect(() => {
-    if (state !== "session" || selectedDatasetId === null) {
+    if (
+      isRestoring ||
+      state !== "session" ||
+      selectedDatasetId === null
+    ) {
       return;
     }
 
@@ -64,9 +75,20 @@ export default function List() {
       try {
         setLoading(true);
         setError(null);
+
+        console.log(
+          "Fetching sessions for dataset:",
+          selectedDatasetId
+        );
+
         const res = await api.get("/sessions", {
-          params: { dataset_id: selectedDatasetId },
+          params: {
+            dataset_id: selectedDatasetId,
+          },
         });
+
+        console.log("Sessions response:", res.data);
+
         setSessions(res.data);
       } catch (err) {
         console.error("Failed to fetch sessions:", err);
@@ -77,7 +99,12 @@ export default function List() {
     };
 
     fetchSessions();
-  }, [state, selectedDatasetId, refreshTrigger]);
+  }, [
+    state,
+    selectedDatasetId,
+    refreshTrigger,
+    isRestoring,
+  ]);
 
   const handleDatasetClick = (dataset) => {
     setSelectedDatasetId(dataset.dataset_id);
@@ -94,136 +121,159 @@ export default function List() {
     setSelectedDatasetId(null);
     setState("data");
   };
-  
+
   return (
     <aside className="w-full md:w-[320px] lg:w-[360px] shrink-0 h-full flex flex-col bg-zinc-900/40 border-r border-zinc-800/80 overflow-hidden">
-      {/* Sidebar Header */}
-      <div className="p-4 border-b border-zinc-800/80 flex items-center justify-between">
-        {state === "session" ? (
-          <div className="flex items-center gap-2">
+      {/* Header */}
+      <div className="h-16 shrink-0 flex items-center justify-between px-4 border-b border-zinc-800/80">
+        <div className="flex items-center gap-2">
+          {state === "session" && (
             <button
-              type="button"
               onClick={handleBackToDatasets}
-              title="Back to Datasets"
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+              className="p-1.5 rounded-md hover:bg-zinc-800 transition-colors"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft size={18} />
             </button>
-            <h2 className="font-semibold text-zinc-100 text-sm flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-emerald-400" />
-              Sessions
-            </h2>
-          </div>
-        ) : (
-          <h2 className="font-semibold text-zinc-100 text-sm flex items-center gap-2">
-            <Database className="w-4 h-4 text-indigo-400" />
-            Datasets
-          </h2>
-        )}
+          )}
+
+          {state === "data" ? (
+            <>
+              <Database size={18} />
+              <span className="font-medium">Datasets</span>
+            </>
+          ) : (
+            <>
+              <MessageSquare size={18} />
+              <span className="font-medium">Sessions</span>
+            </>
+          )}
+        </div>
+
+        <button
+          className="p-1.5 rounded-md hover:bg-zinc-800 transition-colors"
+          title={
+            state === "data"
+              ? "Create dataset"
+              : "New session"
+          }
+        >
+          <Plus size={18} />
+        </button>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-zinc-500 gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
-            <span className="text-xs">Loading items...</span>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {isRestoring || loading ? (
+          <div className="flex items-center justify-center py-8 text-zinc-400">
+            <Loader2
+              size={20}
+              className="animate-spin"
+            />
           </div>
         ) : error ? (
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+          <div className="px-4 py-6 text-sm text-red-400">
             {error}
           </div>
         ) : state === "data" ? (
-          /* Datasets List */
           datasets.length === 0 ? (
-            <div className="p-6 text-center text-zinc-500 text-xs bg-zinc-900/30 rounded-xl border border-zinc-800/50 space-y-2">
-              <FolderOpen className="w-8 h-8 mx-auto text-zinc-600" />
-              <p>No datasets created yet.</p>
+            <div className="flex flex-col items-center justify-center py-12 px-6 text-center text-zinc-500">
+              <FolderOpen
+                size={32}
+                className="mb-3"
+              />
+              <p className="text-sm">
+                No datasets found.
+              </p>
             </div>
           ) : (
-            datasets.map((dataset) => {
-              const isSelected = selectedDatasetId === dataset.dataset_id;
-              return (
+            <div className="p-2 space-y-1">
+              {datasets.map((dataset) => (
                 <button
                   key={dataset.dataset_id}
-                  type="button"
-                  onClick={() => handleDatasetClick(dataset)}
-                  className={`w-full text-left p-3 rounded-xl border transition flex items-start gap-3 ${
-                    isSelected
-                      ? "bg-indigo-600/15 border-indigo-500/40 text-indigo-100"
-                      : "bg-zinc-900/40 border-zinc-800/60 hover:bg-zinc-800/60 hover:border-zinc-700 text-zinc-300"
-                  }`}
+                  onClick={() =>
+                    handleDatasetClick(dataset)
+                  }
+                  className="w-full text-left px-3 py-3 rounded-lg hover:bg-zinc-800/70 transition-colors"
                 >
-                  <div
-                    className={`p-2 rounded-lg mt-0.5 ${
-                      isSelected
-                        ? "bg-indigo-600/20 text-indigo-400"
-                        : "bg-zinc-800 text-zinc-400"
-                    }`}
-                  >
-                    <Database className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-xs md:text-sm text-zinc-100 truncate">
-                      {dataset.name || "Untitled Dataset"}
-                    </div>
-                    <div className="text-[11px] font-mono text-zinc-500 truncate mt-0.5">
-                      {dataset.dataset_id.slice(0, 13)}...
+                  <div className="flex items-center gap-3">
+                    <Database
+                      size={18}
+                      className="shrink-0 text-zinc-400"
+                    />
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {dataset.name ||
+                          dataset.dataset_name ||
+                          dataset.dataset_id}
+                      </p>
+
+                      {dataset.description && (
+                        <p className="text-xs text-zinc-500 truncate mt-0.5">
+                          {dataset.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </button>
-              );
-            })
+              ))}
+            </div>
           )
-        ) : state === "session" ? (
-          /* Sessions List */
+        ) : (
           sessions.length === 0 ? (
-            <div className="p-6 text-center text-zinc-500 text-xs bg-zinc-900/30 rounded-xl border border-zinc-800/50 space-y-2">
-              <MessageSquare className="w-8 h-8 mx-auto text-zinc-600" />
-              <p>No chat sessions in this dataset yet.</p>
+            <div className="flex flex-col items-center justify-center py-12 px-6 text-center text-zinc-500">
+              <MessageSquare
+                size={32}
+                className="mb-3"
+              />
+              <p className="text-sm">
+                No sessions found.
+              </p>
             </div>
           ) : (
-            sessions.map((session) => {
-              const isSelected = selectedSessionId === session.id;
-              return (
+            <div className="p-2 space-y-1">
+              {sessions.map((session) => (
                 <button
                   key={session.id}
-                  type="button"
-                  onClick={() => handleSessionClick(session)}
-                  className={`w-full text-left p-3 rounded-xl border transition flex items-start gap-3 ${
-                    isSelected
-                      ? "bg-emerald-600/15 border-emerald-500/40 text-emerald-100"
-                      : "bg-zinc-900/40 border-zinc-800/60 hover:bg-zinc-800/60 hover:border-zinc-700 text-zinc-300"
+                  onClick={() =>
+                    handleSessionClick(session)
+                  }
+                  className={`w-full text-left px-3 py-3 rounded-lg transition-colors ${
+                    selectedSessionId === session.id
+                      ? "bg-zinc-800"
+                      : "hover:bg-zinc-800/70"
                   }`}
                 >
-                  <div
-                    className={`p-2 rounded-lg mt-0.5 ${
-                      isSelected
-                        ? "bg-emerald-600/20 text-emerald-400"
-                        : "bg-zinc-800 text-zinc-400"
-                    }`}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-xs md:text-sm text-zinc-100 truncate">
-                      Session {session.id.slice(0, 8)}
+                  <div className="flex items-center gap-3">
+                    <MessageSquare
+                      size={18}
+                      className="shrink-0 text-zinc-400"
+                    />
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {session.title ||
+                          session.name ||
+                          session.question ||
+                          `Session ${session.id}`}
+                      </p>
+
+                      {session.created_at && (
+                        <p className="text-xs text-zinc-500 truncate mt-0.5">
+                          {new Date(
+                            session.created_at
+                          ).toLocaleString()}
+                        </p>
+                      )}
                     </div>
-                    {session.created_at && (
-                      <div className="text-[11px] text-zinc-500 mt-0.5">
-                        {new Date(session.created_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    )}
                   </div>
                 </button>
-              );
-            })
+              ))}
+            </div>
           )
-        ) : null}
+        )}
       </div>
     </aside>
   );
 }
+
